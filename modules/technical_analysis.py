@@ -23,15 +23,31 @@ class TechnicalAnalysisEngine:
     def get_price_data(self, ticker, period='6mo'):
         """Obtém dados históricos de preço"""
         try:
+            # Tenta primeiro com o ticker como está
             stock = yf.Ticker(ticker)
             df = stock.history(period=period)
             
+            # Se não encontrou dados e o ticker não tem .SA, tenta adicionar
+            if df.empty and not ticker.endswith('.SA'):
+                ticker_sa = f"{ticker}.SA"
+                stock = yf.Ticker(ticker_sa)
+                df = stock.history(period=period)
+            
+            # Se ainda está vazio, tenta remover .SA
+            if df.empty and ticker.endswith('.SA'):
+                ticker_no_sa = ticker.replace('.SA', '')
+                stock = yf.Ticker(ticker_no_sa)
+                df = stock.history(period=period)
+            
             if df.empty:
+                print(f"⚠️ Sem dados para {ticker}")
                 return None
             
+            print(f"✅ Dados obtidos para {ticker}: {len(df)} registros")
             return df
+            
         except Exception as e:
-            print(f"Erro ao obter dados de {ticker}: {e}")
+            print(f"❌ Erro ao obter dados de {ticker}: {e}")
             return None
     
     def calculate_indicators(self, df):
