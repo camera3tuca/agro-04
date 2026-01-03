@@ -16,54 +16,54 @@ class AgroDatabase:
             # AÇÕES BRASILEIRAS - Agronegócio
             'acoes_br': {
                 # Proteína Animal
-                'BEEF3.SA': {'name': 'Minerva', 'sector': 'Frigorífico', 'subsector': 'Proteína Bovina'},
-                'MRFG3.SA': {'name': 'Marfrig', 'sector': 'Frigorífico', 'subsector': 'Proteína Bovina'},
-                'JBSS3.SA': {'name': 'JBS', 'sector': 'Frigorífico', 'subsector': 'Proteína Animal'},
-                'BRFS3.SA': {'name': 'BRF', 'sector': 'Frigorífico', 'subsector': 'Aves e Suínos'},
+                'BEEF3': {'name': 'Minerva', 'sector': 'Frigorífico', 'subsector': 'Proteína Bovina'},
+                'MRFG3': {'name': 'Marfrig', 'sector': 'Frigorífico', 'subsector': 'Proteína Bovina'},
+                'JBSS3': {'name': 'JBS', 'sector': 'Frigorífico', 'subsector': 'Proteína Animal'},
+                'BRFS3': {'name': 'BRF', 'sector': 'Frigorífico', 'subsector': 'Aves e Suínos'},
                 
                 # Alimentos e Bebidas
-                'ABEV3.SA': {'name': 'Ambev', 'sector': 'Bebidas', 'subsector': 'Cervejas'},
-                'MDIA3.SA': {'name': 'M.Dias Branco', 'sector': 'Alimentos', 'subsector': 'Massas e Biscoitos'},
+                'ABEV3': {'name': 'Ambev', 'sector': 'Bebidas', 'subsector': 'Cervejas'},
+                'MDIA3': {'name': 'M.Dias Branco', 'sector': 'Alimentos', 'subsector': 'Massas e Biscoitos'},
                 
                 # Insumos Agrícolas
-                'SMTO3.SA': {'name': 'São Martinho', 'sector': 'Açúcar e Etanol', 'subsector': 'Bioenergia'},
-                'SOJA3.SA': {'name': 'Boa Safra', 'sector': 'Insumos', 'subsector': 'Sementes'},
+                'SMTO3': {'name': 'São Martinho', 'sector': 'Açúcar e Etanol', 'subsector': 'Bioenergia'},
+                'SOJA3': {'name': 'Boa Safra', 'sector': 'Insumos', 'subsector': 'Sementes'},
                 
                 # Trading e Logística
-                'RAIZ4.SA': {'name': 'Raízen', 'sector': 'Bioenergia', 'subsector': 'Etanol'},
-                'CSAN3.SA': {'name': 'Cosan', 'sector': 'Bioenergia', 'subsector': 'Açúcar e Etanol'},
+                'RAIZ4': {'name': 'Raízen', 'sector': 'Bioenergia', 'subsector': 'Etanol'},
+                'CSAN3': {'name': 'Cosan', 'sector': 'Bioenergia', 'subsector': 'Açúcar e Etanol'},
                 
                 # Papel e Celulose
-                'SUZB3.SA': {'name': 'Suzano', 'sector': 'Papel e Celulose', 'subsector': 'Celulose'},
-                'KLBN11.SA': {'name': 'Klabin', 'sector': 'Papel e Celulose', 'subsector': 'Papel'},
+                'SUZB3': {'name': 'Suzano', 'sector': 'Papel e Celulose', 'subsector': 'Celulose'},
+                'KLBN11': {'name': 'Klabin', 'sector': 'Papel e Celulose', 'subsector': 'Papel'},
                 
                 # Terras e Agricultura
-                'SLCE3.SA': {'name': 'SLC Agrícola', 'sector': 'Agricultura', 'subsector': 'Grãos'},
-                'AGRO3.SA': {'name': 'BrasilAgro', 'sector': 'Agricultura', 'subsector': 'Terras Agrícolas'},
+                'SLCE3': {'name': 'SLC Agrícola', 'sector': 'Agricultura', 'subsector': 'Grãos'},
+                'AGRO3': {'name': 'BrasilAgro', 'sector': 'Agricultura', 'subsector': 'Terras Agrícolas'},
             },
             
-            # BDRs - Agronegócio Internacional
+            # BDRs - Agronegócio Internacional (SEM .SA - são tickers US)
             'bdrs': {
                 # Equipamentos Agrícolas
-                'D1EE34.SA': {'name': 'Deere & Company', 'sector': 'Equipamentos', 'subsector': 'Maquinário Agrícola', 'us_ticker': 'DE'},
-                'A1GC34.SA': {'name': 'AGCO Corp', 'sector': 'Equipamentos', 'subsector': 'Maquinário Agrícola', 'us_ticker': 'AGCO'},
+                'DE': {'name': 'Deere & Company', 'sector': 'Equipamentos', 'subsector': 'Maquinário Agrícola'},
+                'AGCO': {'name': 'AGCO Corp', 'sector': 'Equipamentos', 'subsector': 'Maquinário Agrícola'},
                 
                 # Trading e Processamento
-                'A1DM34.SA': {'name': 'Archer Daniels', 'sector': 'Trading', 'subsector': 'Commodities Agrícolas', 'us_ticker': 'ADM'},
-                'B1UN34.SA': {'name': 'Bunge', 'sector': 'Trading', 'subsector': 'Commodities Agrícolas', 'us_ticker': 'BG'},
+                'ADM': {'name': 'Archer Daniels', 'sector': 'Trading', 'subsector': 'Commodities Agrícolas'},
+                'BG': {'name': 'Bunge', 'sector': 'Trading', 'subsector': 'Commodities Agrícolas'},
                 
                 # Fertilizantes
-                'M1OS34.SA': {'name': 'Mosaic', 'sector': 'Insumos', 'subsector': 'Fertilizantes', 'us_ticker': 'MOS'},
-                'N1TR34.SA': {'name': 'Nutrien', 'sector': 'Insumos', 'subsector': 'Fertilizantes', 'us_ticker': 'NTR'},
-                'C1F34.SA': {'name': 'CF Industries', 'sector': 'Insumos', 'subsector': 'Fertilizantes', 'us_ticker': 'CF'},
+                'MOS': {'name': 'Mosaic', 'sector': 'Insumos', 'subsector': 'Fertilizantes'},
+                'NTR': {'name': 'Nutrien', 'sector': 'Insumos', 'subsector': 'Fertilizantes'},
+                'CF': {'name': 'CF Industries', 'sector': 'Insumos', 'subsector': 'Fertilizantes'},
                 
                 # Biotecnologia Agrícola
-                'C1TX34.SA': {'name': 'Corteva', 'sector': 'Insumos', 'subsector': 'Sementes e Defensivos', 'us_ticker': 'CTVA'},
+                'CTVA': {'name': 'Corteva', 'sector': 'Insumos', 'subsector': 'Sementes e Defensivos'},
             },
             
             # ETFs - Agronegócio
             'etfs': {
-                'FOOD11.SA': {'name': 'ETF Agronegócio', 'sector': 'ETF', 'subsector': 'Agronegócio BR'},
+                'FOOD11': {'name': 'ETF Agronegócio', 'sector': 'ETF', 'subsector': 'Agronegócio BR'},
             },
             
             # Commodities para Correlação
