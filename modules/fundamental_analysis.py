@@ -19,8 +19,26 @@ class FundamentalAnalysisEngine:
     def get_fundamental_data(self, ticker):
         """Obtém dados fundamentalistas"""
         try:
+            # Tenta primeiro com o ticker como está
             stock = yf.Ticker(ticker)
             info = stock.info
+            
+            # Verifica se tem dados úteis
+            if not info or len(info) < 5:
+                # Tenta com .SA se não tiver
+                if not ticker.endswith('.SA'):
+                    ticker_sa = f"{ticker}.SA"
+                    stock = yf.Ticker(ticker_sa)
+                    info = stock.info
+                # Tenta sem .SA
+                elif ticker.endswith('.SA'):
+                    ticker_no_sa = ticker.replace('.SA', '')
+                    stock = yf.Ticker(ticker_no_sa)
+                    info = stock.info
+            
+            if not info or len(info) < 5:
+                print(f"⚠️ Sem dados fundamentalistas para {ticker}")
+                return None
             
             # Indicadores fundamentalistas relevantes
             fundamentals = {
@@ -58,10 +76,11 @@ class FundamentalAnalysisEngine:
                 'recommendation': info.get('recommendationKey', None),
             }
             
+            print(f"✅ Fundamentais obtidos para {ticker}")
             return fundamentals
             
         except Exception as e:
-            print(f"Erro ao obter fundamentals de {ticker}: {e}")
+            print(f"❌ Erro ao obter fundamentals de {ticker}: {e}")
             return None
     
     def analyze_valuation(self, fundamentals):
