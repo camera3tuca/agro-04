@@ -1,33 +1,25 @@
-"""
-AGRO MONITOR PRO v2.0
-Sistema Profissional de Monitoramento do Agronegócio
-"""
-
 import streamlit as st
+import requests
+import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import time
-import json
-from typing import Dict, List, Optional
-import warnings
-warnings.filterwarnings('ignore')
+from ta.trend import SMAIndicator, EMAIndicator, MACD, ADXIndicator
+from ta.momentum import RSIIndicator, StochasticOscillator
+from ta.volatility import BollingerBands, AverageTrueRange
 
-# Imports dos módulos
-from modules.database import AgroDatabase
-from modules.technical_analysis import TechnicalAnalysisEngine
-from modules.fundamental_analysis import FundamentalAnalysisEngine
-from modules.news_analysis import NewsAnalysisEngine
-from modules.monitoring_system import AgroMonitoringSystem
-from modules.cache_manager import CacheManager
-from modules.scheduler import SchedulerManager
+# ===================================================================
+# CONFIGURAÇÕES E CREDENCIAIS
+# ===================================================================
+FINNHUB_API_KEY = "d4uouchr01qnm7pnasq0d4uouchr01qnm7pnasqg"
+NEWS_API_KEY = "ec7100fa90ef4e3f9a69a914050dd736"
+BRAPI_TOKEN = "iExnKM1xcbQcYL3cNPhPQ3"
 
-# Configuração da Página
 st.set_page_config(
-    page_title="🌾 Agro Monitor Pro",
+    page_title="🌾 Agro Tracker Pro - Sistema Completo",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -36,521 +28,468 @@ st.set_page_config(
 # CSS Customizado
 st.markdown("""
 <style>
-    .main { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-    .metric-card { background: white; padding: 20px; border-radius: 10px; 
-                   box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
-    .big-title { font-size: 42px; font-weight: bold; color: #2c3e50; 
-                 text-align: center; margin-bottom: 10px; }
-    .subtitle { font-size: 18px; color: #7f8c8d; text-align: center; margin-bottom: 30px; }
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
+.main {padding: 0rem 1rem;}
+.stMetric {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+           color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+.stMetric label {color: white !important; font-weight: 600;}
+.stMetric [data-testid="stMetricValue"] {color: white !important;}
+h1 {color: #2e7d32; text-align: center; font-size: 2.5rem; font-weight: 700;}
+.positive {color: #00c853; font-weight: bold;}
+.negative {color: #d32f2f; font-weight: bold;}
+.news-card {background: #f8f9fa; padding: 15px; border-radius: 10px; 
+            margin: 10px 0; border-left: 4px solid #667eea;}
 </style>
 """, unsafe_allow_html=True)
 
-# Inicialização do Sistema
-@st.cache_resource
-def initialize_system():
-    """Inicializa o sistema com cache"""
+# ===================================================================
+# BASE DE DADOS DO AGRONEGÓCIO
+# ===================================================================
+ATIVOS_AGRO = {
+    "Ações BR": {
+        'BEEF3.SA': 'Minerva Foods', 'MRFG3.SA': 'Marfrig', 'JBSS3.SA': 'JBS',
+        'BRFS3.SA': 'BRF', 'ABEV3.SA': 'Ambev', 'MDIA3.SA': 'M. Dias Branco',
+        'SMTO3.SA': 'São Martinho', 'SOJA3.SA': 'Boa Safra', 'RAIZ4.SA': 'Raízen',
+        'CSAN3.SA': 'Cosan', 'SUZB3.SA': 'Suzano', 'KLBN11.SA': 'Klabin',
+        'SLCE3.SA': 'SLC Agrícola', 'AGRO3.SA': 'BrasilAgro'
+    },
+    "BDRs Internacionais": {
+        'DE': 'Deere & Company', 'AGCO': 'AGCO Corp', 'ADM': 'Archer Daniels',
+        'BG': 'Bunge', 'MOS': 'Mosaic', 'NTR': 'Nutrien', 'CTVA': 'Corteva'
+    },
+    "FIAGROs": {
+        'AGRX11.SA': 'Exes Araguaia', 'BBGO11.SA': 'BB Crédito',
+        'FARM11.SA': 'Santa Fé', 'GCRA11.SA': 'Galápagos', 'KNCA11.SA': 'Kinea',
+        'RURA11.SA': 'Itaú Asset', 'SNAG11.SA': 'Suno Agro', 'XPCA11.SA': 'XP Crédito'
+    }
+}
+
+# ===================================================================
+# FUNÇÕES DE API
+# ===================================================================
+@st.cache_data(ttl=300)
+def get_brapi_quote(ticker):
+    """Obtém cotação via Brapi"""
     try:
-        if hasattr(st, 'secrets'):
-            finnhub_key = st.secrets.get("FINNHUB_API_KEY", "")
-            news_key = st.secrets.get("NEWS_API_KEY", "")
-            brapi_token = st.secrets.get("BRAPI_API_TOKEN", "")
-        else:
-            finnhub_key = ""
-            news_key = ""
-            brapi_token = ""
-        
-        system = AgroMonitoringSystem(finnhub_key, news_key, brapi_token)
-        cache_manager = CacheManager()
-        scheduler = SchedulerManager()
-        
-        return system, cache_manager, scheduler
+        symbol = ticker.replace('.SA', '')
+        url = f"https://brapi.dev/api/quote/{symbol}?token={BRAPI_TOKEN}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                return data['results'][0]
     except Exception as e:
-        st.error(f"Erro ao inicializar sistema: {e}")
-        return None, None, None
+        st.warning(f"Erro Brapi {ticker}: {e}")
+    return None
 
-system, cache_manager, scheduler = initialize_system()
-
-# Funções Auxiliares
-def get_score_color(score: float) -> str:
-    """Retorna classe CSS baseada no score"""
-    if score >= 70:
-        return "score-high"
-    elif score >= 50:
-        return "score-medium"
-    else:
-        return "score-low"
-
-def create_gauge_chart(score: float, title: str) -> go.Figure:
-    """Cria gráfico de gauge (velocímetro)"""
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
-        value=score,
-        domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': title, 'font': {'size': 20}},
-        delta={'reference': 50},
-        gauge={
-            'axis': {'range': [None, 100]},
-            'bar': {'color': "darkblue"},
-            'steps': [
-                {'range': [0, 40], 'color': '#ffcccc'},
-                {'range': [40, 60], 'color': '#fff9cc'},
-                {'range': [60, 100], 'color': '#ccffcc'}
-            ],
-            'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 75}
-        }
-    ))
-    fig.update_layout(height=250, margin=dict(l=20, r=20, t=50, b=20))
-    return fig
-
-@st.cache_data(ttl=3600)
-def load_analysis_data(ticker: str) -> Optional[Dict]:
-    """Carrega dados de análise com cache"""
+@st.cache_data(ttl=600)
+def get_news_agro():
+    """Obtém notícias do agronegócio"""
     try:
-        cached_data = cache_manager.get_cached_analysis(ticker)
-        if cached_data:
-            return cached_data
+        url = f"https://newsapi.org/v2/everything?q=agronegócio OR agricultura OR JBS OR commodities&language=pt&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json().get('articles', [])[:5]
+    except:
+        pass
+    return []
+
+@st.cache_data(ttl=300)
+def get_finnhub_sentiment(symbol):
+    """Obtém sentimento via Finnhub"""
+    try:
+        url = f"https://finnhub.io/api/v1/news-sentiment?symbol={symbol}&token={FINNHUB_API_KEY}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('sentiment', {})
+    except:
+        pass
+    return None
+
+# ===================================================================
+# ANÁLISE TÉCNICA
+# ===================================================================
+def calculate_technical_indicators(df):
+    """Calcula indicadores técnicos"""
+    if df is None or len(df) < 50:
+        return None
+    
+    try:
+        ind = {}
+        ind['SMA_20'] = SMAIndicator(df['Close'], 20).sma_indicator()
+        ind['SMA_50'] = SMAIndicator(df['Close'], 50).sma_indicator()
+        ind['SMA_200'] = SMAIndicator(df['Close'], 200).sma_indicator()
         
-        analysis = system.analyze_asset(ticker)
-        if analysis:
-            cache_manager.save_analysis(ticker, analysis)
-        return analysis
-    except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
+        macd = MACD(df['Close'])
+        ind['MACD'] = macd.macd()
+        ind['MACD_signal'] = macd.macd_signal()
+        ind['MACD_hist'] = macd.macd_diff()
+        
+        ind['RSI'] = RSIIndicator(df['Close'], 14).rsi()
+        
+        bb = BollingerBands(df['Close'], 20, 2)
+        ind['BB_upper'] = bb.bollinger_hband()
+        ind['BB_lower'] = bb.bollinger_lband()
+        ind['BB_middle'] = bb.bollinger_mavg()
+        
+        ind['ATR'] = AverageTrueRange(df['High'], df['Low'], df['Close']).average_true_range()
+        
+        return ind
+    except:
         return None
 
-# SIDEBAR
-with st.sidebar:
-    st.markdown("# 🌾 Agro Monitor Pro")
-    st.markdown("---")
+def analyze_trend(df, indicators):
+    """Analisa tendência"""
+    if not indicators:
+        return {'trend': 'NEUTRO', 'score': 0, 'signals': []}
     
-    menu = st.radio(
-        "📍 Navegação",
-        ["🏠 Dashboard", "📊 Análise Individual", "🔍 Scanner", 
-         "📈 Comparador", "📰 Notícias", "⚙️ Configurações"]
-    )
-    
-    st.markdown("---")
-    st.markdown("### 👤 Perfil")
-    perfil = st.selectbox("Selecione", ["🛡️ Conservador", "⚖️ Moderado", "🚀 Arrojado"], index=1)
-    
-    st.markdown("---")
-    st.markdown("### 🎯 Filtros")
-    score_min = st.slider("Score Mínimo", 0, 100, 50, 5)
-    
-    st.markdown("---")
-    if st.button("🔄 Atualizar", use_container_width=True):
-        cache_manager.clear_all_cache()
-        st.success("✅ Cache limpo!")
-        st.rerun()
-    
-    cache_info = cache_manager.get_cache_info()
-    st.metric("📦 Cache", cache_info['total_items'])
-
-# PÁGINA 1: DASHBOARD
-if menu == "🏠 Dashboard":
-    st.markdown('<div class="big-title">🌾 Dashboard do Agronegócio</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Monitoramento em Tempo Real</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("📊 Total Ativos", len(system.database.get_all_tickers()))
-    with col2:
-        st.metric("🟢 Oportunidades", "12", delta="+3")
-    with col3:
-        st.metric("📈 Score Médio", "62.5", delta="+2.3")
-    with col4:
-        st.metric("💰 Setor Destaque", "Frigoríficos")
-    
-    st.markdown("---")
-    st.markdown("### 🏆 Top 5 Oportunidades")
-    
-    with st.spinner("🔍 Analisando..."):
-        top_tickers = ['BEEF3', 'JBSS3', 'BRFS3', 'SLCE3', 'AGRO3']
-        data = []
+    try:
+        price = df['Close'].iloc[-1]
+        sma20 = indicators['SMA_20'].iloc[-1]
+        sma50 = indicators['SMA_50'].iloc[-1]
+        sma200 = indicators['SMA_200'].iloc[-1]
         
-        for ticker in top_tickers:
-            analysis = load_analysis_data(ticker)
-            if analysis:
-                data.append({
-                    'Ticker': ticker,
-                    'Empresa': analysis['info']['name'],
-                    'Preço': f"R$ {analysis['price_data']['current']:.2f}",
-                    'Score': f"{analysis['recommendation']['final_score']:.1f}",
-                    'Recomendação': analysis['recommendation']['action']
-                })
+        score = 0
+        signals = []
         
-        if data:
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-
-# PÁGINA 2: ANÁLISE INDIVIDUAL
-elif menu == "📊 Análise Individual":
-    st.markdown('<div class="big-title">📊 Análise Detalhada</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        ticker = st.selectbox("Selecione o ativo:", system.database.get_all_tickers())
-    
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        analyze_btn = st.button("🔍 Analisar", use_container_width=True, type="primary")
-    
-    if ticker and analyze_btn:
-        with st.spinner(f"🔄 Analisando {ticker}..."):
-            analysis = load_analysis_data(ticker)
-            
-            if analysis:
-                st.markdown("---")
-                st.markdown(f"## {ticker} - {analysis['info']['name']}")
-                st.caption(f"📍 {analysis['info']['sector']} | {analysis['info']['subsector']}")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("💰 Preço", f"R$ {analysis['price_data']['current']:.2f}",
-                             delta=f"{analysis['price_data']['change_1d']:+.2f}%")
-                
-                with col2:
-                    st.metric("📈 Var 1M", f"{analysis['price_data']['change_1m']:+.2f}%")
-                
-                with col3:
-                    st.metric("⭐ Score", f"{analysis['recommendation']['final_score']:.1f}/100")
-                
-                with col4:
-                    st.metric("🎯 Ação", analysis['recommendation']['action'].split()[1])
-                
-                st.markdown("---")
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    fig = create_gauge_chart(analysis['technical']['score']['score'], "📊 Score Técnico")
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    fig = create_gauge_chart(analysis['fundamental']['score']['score'], "💼 Score Fundamentalista")
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col3:
-                    sentiment_score = (analysis['news']['sentiment']['score'] + 100) / 2
-                    fig = create_gauge_chart(sentiment_score, "📰 Sentimento")
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("---")
-                
-                with st.expander("📊 ANÁLISE TÉCNICA", expanded=True):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("#### 📈 Tendência")
-                        st.markdown(f"**Status:** {analysis['technical']['trend']['trend']}")
-                        for signal in analysis['technical']['trend']['signals'][:3]:
-                            st.markdown(f"- {signal}")
-                    
-                    with col2:
-                        st.markdown("#### ⚡ Momentum")
-                        st.markdown(f"**RSI:** {analysis['technical']['momentum'].get('rsi', 0):.1f}")
-                        for signal in analysis['technical']['momentum']['signals'][:2]:
-                            st.markdown(f"- {signal}")
-
-# CONTINUA NA PARTE 2...
-# PÁGINA 3: SCANNER
-elif menu == "🔍 Scanner":
-    st.markdown('<div class="big-title">🔍 Scanner de Oportunidades</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        scan_score_min = st.slider("Score Mínimo", 0, 100, 60, 5)
-    
-    with col2:
-        scan_limit = st.slider("Máximo de Ativos", 5, 30, 10)
-    
-    with col3:
-        scan_type = st.selectbox("Tipo", ["Completa", "Técnica", "Fundamentalista"])
-    
-    if st.button("🚀 Iniciar Scanner", use_container_width=True, type="primary"):
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        if price > sma20:
+            score += 1
+            signals.append("✓ Preço > SMA20")
+        if price > sma50:
+            score += 2
+            signals.append("✓ Preço > SMA50")
+        if price > sma200:
+            score += 3
+            signals.append("✓ Preço > SMA200")
+        if sma50 > sma200:
+            score += 2
+            signals.append("✓ Golden Cross")
         
-        results = []
-        tickers = system.database.get_all_tickers()[:scan_limit]
-        
-        for i, ticker in enumerate(tickers):
-            status_text.text(f"Analisando {ticker}... ({i+1}/{len(tickers)})")
-            progress_bar.progress((i + 1) / len(tickers))
-            
-            analysis = load_analysis_data(ticker)
-            
-            if analysis and analysis['recommendation']['final_score'] >= scan_score_min:
-                results.append(analysis)
-            
-            time.sleep(0.1)
-        
-        status_text.empty()
-        progress_bar.empty()
-        
-        if results:
-            st.success(f"✅ {len(results)} oportunidades encontradas!")
-            
-            results.sort(key=lambda x: x['recommendation']['final_score'], reverse=True)
-            
-            data = []
-            for i, r in enumerate(results, 1):
-                data.append({
-                    'Rank': i,
-                    'Ticker': r['ticker'],
-                    'Empresa': r['info']['name'],
-                    'Preço': f"R$ {r['price_data']['current']:.2f}",
-                    'Score': r['recommendation']['final_score'],
-                    'Ação': r['recommendation']['action']
-                })
-            
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-            
-            st.markdown("### 📊 Gráfico de Scores")
-            fig = px.bar(df, x='Ticker', y='Score', color='Score',
-                        color_continuous_scale='RdYlGn', title="Scores por Ativo")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("### 💾 Exportar")
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                csv = df.to_csv(index=False)
-                st.download_button("📥 CSV", csv, 
-                                 f"scan_{datetime.now().strftime('%Y%m%d')}.csv",
-                                 "text/csv", use_container_width=True)
-            
-            with col2:
-                json_data = json.dumps([r for r in results], indent=2, default=str)
-                st.download_button("📥 JSON", json_data,
-                                 f"scan_{datetime.now().strftime('%Y%m%d')}.json",
-                                 "application/json", use_container_width=True)
+        if score >= 5:
+            trend = '🟢 ALTA FORTE'
+        elif score >= 3:
+            trend = '🟢 ALTA'
+        elif score >= 1:
+            trend = '🟡 ALTA FRACA'
+        elif score >= -1:
+            trend = '⚪ NEUTRO'
         else:
-            st.warning("❌ Nenhuma oportunidade encontrada")
+            trend = '🔴 BAIXA'
+        
+        return {'trend': trend, 'score': score, 'signals': signals}
+    except:
+        return {'trend': 'NEUTRO', 'score': 0, 'signals': []}
 
-# PÁGINA 4: COMPARADOR
-elif menu == "📈 Comparador":
-    st.markdown('<div class="big-title">📈 Comparador de Ativos</div>', unsafe_allow_html=True)
+def calculate_score(df, indicators):
+    """Calcula score técnico (0-100)"""
+    if not indicators:
+        return 50, "⚪ NEUTRO"
     
-    col1, col2 = st.columns([4, 1])
-    
-    with col1:
-        tickers_comp = st.multiselect("Selecione até 5 ativos:",
-                                     system.database.get_all_tickers(),
-                                     default=['BEEF3', 'JBSS3', 'BRFS3'])
-    
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        comp_btn = st.button("📊 Comparar", use_container_width=True, type="primary")
-    
-    if tickers_comp and comp_btn:
-        if len(tickers_comp) > 5:
-            st.warning("⚠️ Máximo 5 ativos")
+    try:
+        trend = analyze_trend(df, indicators)
+        rsi = indicators['RSI'].iloc[-1]
+        macd = indicators['MACD'].iloc[-1]
+        signal = indicators['MACD_signal'].iloc[-1]
+        
+        score = 50 + (trend['score'] * 4)
+        
+        if rsi < 30:
+            score += 10
+        elif rsi > 70:
+            score -= 10
+        
+        if macd > signal:
+            score += 5
         else:
-            with st.spinner("📊 Comparando..."):
-                comparisons = []
-                
-                for ticker in tickers_comp:
-                    analysis = load_analysis_data(ticker)
-                    if analysis:
-                        comparisons.append(analysis)
-                
-                if comparisons:
-                    data = []
-                    for comp in comparisons:
-                        data.append({
-                            'Ticker': comp['ticker'],
-                            'Empresa': comp['info']['name'],
-                            'Preço': f"R$ {comp['price_data']['current']:.2f}",
-                            'Score': comp['recommendation']['final_score'],
-                            'Técnico': comp['technical']['score']['score'],
-                            'Fundamental': comp['fundamental']['score']['score']
-                        })
-                    
-                    df = pd.DataFrame(data)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
-                    
-                    st.markdown("---")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("### 📊 Comparação de Scores")
-                        
-                        fig = go.Figure()
-                        
-                        fig.add_trace(go.Bar(name='Técnico',
-                                           x=[c['ticker'] for c in comparisons],
-                                           y=[c['technical']['score']['score'] for c in comparisons]))
-                        
-                        fig.add_trace(go.Bar(name='Fundamentalista',
-                                           x=[c['ticker'] for c in comparisons],
-                                           y=[c['fundamental']['score']['score'] for c in comparisons]))
-                        
-                        fig.update_layout(barmode='group', height=400)
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        st.markdown("### 💰 Variação de Preços")
-                        
-                        fig = go.Figure()
-                        
-                        for comp in comparisons:
-                            fig.add_trace(go.Bar(name=comp['ticker'],
-                                               x=['1D', '5D', '1M'],
-                                               y=[comp['price_data']['change_1d'],
-                                                  comp['price_data']['change_5d'],
-                                                  comp['price_data']['change_1m']]))
-                        
-                        fig.update_layout(barmode='group', height=400)
-                        st.plotly_chart(fig, use_container_width=True)
+            score -= 5
+        
+        score = max(0, min(100, score))
+        
+        if score >= 75:
+            classification = "🟢 COMPRA FORTE"
+        elif score >= 60:
+            classification = "🟢 COMPRA"
+        elif score >= 55:
+            classification = "🟡 COMPRA FRACA"
+        elif score >= 45:
+            classification = "⚪ NEUTRO"
+        elif score >= 40:
+            classification = "🟡 VENDA FRACA"
+        elif score >= 25:
+            classification = "🔴 VENDA"
+        else:
+            classification = "🔴 VENDA FORTE"
+        
+        return round(score, 1), classification
+    except:
+        return 50, "⚪ NEUTRO"
 
-# PÁGINA 5: NOTÍCIAS
-elif menu == "📰 Notícias":
-    st.markdown('<div class="big-title">📰 Central de Notícias</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        news_ticker = st.selectbox("Ativo:", ["Todos"] + system.database.get_all_tickers())
-    
-    with col2:
-        news_limit = st.slider("Quantidade:", 5, 20, 10)
-    
-    if st.button("🔄 Buscar Notícias", use_container_width=True):
-        with st.spinner("📰 Buscando..."):
-            if news_ticker == "Todos":
-                tickers_news = system.database.get_all_tickers()[:5]
-            else:
-                tickers_news = [news_ticker]
-            
-            all_news = []
-            
-            for ticker in tickers_news:
-                ticker_info = system.database.get_ticker_info(ticker)
-                if ticker_info:
-                    us_ticker = ticker_info.get('us_ticker', ticker)
-                    news = system.news.get_news(ticker, us_ticker)
-                    
-                    for item in news[:3]:
-                        title = item.get('headline', '') or item.get('title', '')
-                        all_news.append({
-                            'Ticker': ticker,
-                            'Título': title,
-                            'URL': item.get('url', item.get('link', ''))
-                        })
-                
-                time.sleep(0.5)
-            
-            if all_news:
-                st.success(f"✅ {len(all_news)} notícias encontradas")
-                
-                for news in all_news[:news_limit]:
-                    with st.expander(f"📰 {news['Ticker']} - {news['Título'][:60]}..."):
-                        if news['URL']:
-                            st.markdown(f"[🔗 Ler notícia completa]({news['URL']})")
-            else:
-                st.warning("❌ Nenhuma notícia encontrada")
+# ===================================================================
+# INTERFACE PRINCIPAL
+# ===================================================================
+st.title("🌾 Agro Tracker Pro - Sistema Completo de Análise")
+st.markdown("### 📊 Monitoramento em Tempo Real | Análise Técnica + Fundamentalista + Notícias")
+st.markdown("---")
 
-# PÁGINA 6: CONFIGURAÇÕES
-elif menu == "⚙️ Configurações":
-    st.markdown('<div class="big-title">⚙️ Configurações</div>', unsafe_allow_html=True)
+# Sidebar
+st.sidebar.header("⚙️ Configurações")
+categoria = st.sidebar.selectbox("Categoria:", list(ATIVOS_AGRO.keys()))
+ativos = st.sidebar.multiselect(
+    "Selecione Ativos:",
+    options=list(ATIVOS_AGRO[categoria].keys()),
+    default=list(ATIVOS_AGRO[categoria].keys())[:3],
+    format_func=lambda x: ATIVOS_AGRO[categoria][x]
+)
+periodo = st.sidebar.selectbox("Período:", ["1d", "5d", "1mo", "3mo", "6mo", "1y"], index=2)
+auto_refresh = st.sidebar.checkbox("🔄 Auto-atualizar (60s)", False)
+
+st.sidebar.markdown("---")
+st.sidebar.info("💡 **Dados via:** Brapi, Yahoo Finance, NewsAPI, Finnhub")
+st.sidebar.caption(f"⏰ Atualizado: {datetime.now().strftime('%H:%M:%S')}")
+
+# ===================================================================
+# SEÇÃO DE NOTÍCIAS
+# ===================================================================
+with st.expander("📰 Últimas Notícias do Agronegócio", expanded=False):
+    news = get_news_agro()
+    if news:
+        for article in news:
+            st.markdown(f"""
+            <div class='news-card'>
+                <h4 style='margin:0; color:#667eea;'>{article.get('title', 'Sem título')}</h4>
+                <p style='margin:5px 0; font-size:0.9em; color:#666;'>
+                    🗓️ {article.get('publishedAt', '')[:10]} | 📰 {article.get('source', {}).get('name', 'Fonte')}
+                </p>
+                <p style='margin:5px 0;'>{article.get('description', '')[:200]}...</p>
+                <a href='{article.get('url', '#')}' target='_blank' style='color:#667eea;'>Ler mais →</a>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("Nenhuma notícia disponível no momento.")
+
+st.markdown("---")
+
+# ===================================================================
+# DASHBOARD DE ATIVOS
+# ===================================================================
+if ativos:
+    # Panorama Geral
+    st.subheader(f"📊 Panorama Geral - {categoria}")
+    cols = st.columns(min(4, len(ativos)))
     
-    tab1, tab2, tab3 = st.tabs(["🔑 APIs", "🔄 Scheduler", "💾 Cache"])
+    for idx, ticker in enumerate(ativos[:8]):
+        with cols[idx % len(cols)]:
+            try:
+                # Dados via Brapi
+                brapi_data = get_brapi_quote(ticker)
+                
+                if brapi_data:
+                    price = brapi_data.get('regularMarketPrice', 0)
+                    change = brapi_data.get('regularMarketChangePercent', 0)
+                    
+                    st.metric(
+                        label=ATIVOS_AGRO[categoria][ticker],
+                        value=f"R$ {price:.2f}",
+                        delta=f"{change:+.2f}%"
+                    )
+                else:
+                    # Fallback para YFinance
+                    stock = yf.Ticker(ticker)
+                    hist = stock.history(period='1d')
+                    if not hist.empty:
+                        price = hist['Close'].iloc[-1]
+                        change = ((price - hist['Open'].iloc[0]) / hist['Open'].iloc[0]) * 100
+                        st.metric(
+                            label=ATIVOS_AGRO[categoria][ticker],
+                            value=f"R$ {price:.2f}",
+                            delta=f"{change:+.2f}%"
+                        )
+            except:
+                st.metric(label=ATIVOS_AGRO[categoria][ticker], value="N/D")
+    
+    st.markdown("---")
+    
+    # Abas de Análise
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Análise Técnica", "📊 Gráficos", "📉 Comparativo", "📋 Resumo"])
     
     with tab1:
-        st.markdown("### 🔑 Configuração de APIs")
-        st.info("Configure suas chaves no Streamlit Cloud em 'Settings → Secrets'")
+        st.subheader("🔍 Análise Técnica Detalhada")
         
-        st.code("""
-FINNHUB_API_KEY = "sua_chave"
-NEWS_API_KEY = "sua_chave"
-BRAPI_API_TOKEN = "sua_chave"
-        """, language="toml")
-        
-        st.markdown("### 📚 Obter Chaves")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("**Finnhub**")
-            st.markdown("[Cadastrar →](https://finnhub.io)")
-        
-        with col2:
-            st.markdown("**News API**")
-            st.markdown("[Cadastrar →](https://newsapi.org)")
-        
-        with col3:
-            st.markdown("**Brapi**")
-            st.markdown("[Cadastrar →](https://brapi.dev)")
-    
-    with tab2:
-        st.markdown("### 🔄 Jobs Agendados")
-        
-        if scheduler:
-            status = scheduler.get_job_status()
-            
-            if status:
-                for job in status:
-                    with st.expander(f"📋 {job['name']}"):
-                        col1, col2 = st.columns(2)
+        for ticker in ativos:
+            with st.expander(f"📊 {ATIVOS_AGRO[categoria][ticker]} ({ticker})", expanded=True):
+                try:
+                    stock = yf.Ticker(ticker)
+                    df = stock.history(period=periodo)
+                    
+                    if df.empty:
+                        st.warning("Dados indisponíveis")
+                        continue
+                    
+                    indicators = calculate_technical_indicators(df)
+                    
+                    if indicators:
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        price = df['Close'].iloc[-1]
+                        change = ((price - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
+                        rsi = indicators['RSI'].iloc[-1]
+                        score, classification = calculate_score(df, indicators)
                         
                         with col1:
-                            st.metric("Tipo", job['schedule_type'])
-                            st.metric("Última Exec", job['last_run'][:19] if job['last_run'] else "Nunca")
-                        
+                            st.metric("Preço Atual", f"R$ {price:.2f}", f"{change:+.2f}%")
                         with col2:
-                            st.metric("Status", job['last_status'])
-                            st.metric("Próxima Exec", job['next_run'][:19] if job['next_run'] else "N/A")
-            else:
-                st.info("Nenhum job configurado")
+                            st.metric("RSI (14)", f"{rsi:.1f}")
+                        with col3:
+                            st.metric("Score Técnico", f"{score}/100")
+                        with col4:
+                            st.metric("Recomendação", classification)
+                        
+                        trend = analyze_trend(df, indicators)
+                        st.markdown(f"**Tendência:** {trend['trend']}")
+                        st.markdown("**Sinais:**")
+                        for signal in trend['signals']:
+                            st.markdown(f"- {signal}")
+                        
+                        # Sentimento (se disponível)
+                        if not ticker.endswith('.SA'):
+                            sentiment = get_finnhub_sentiment(ticker)
+                            if sentiment:
+                                st.markdown(f"**Sentimento Finnhub:** {sentiment}")
+                    
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+    
+    with tab2:
+        st.subheader("📈 Gráficos de Preços")
+        
+        for ticker in ativos:
+            try:
+                stock = yf.Ticker(ticker)
+                df = stock.history(period=periodo)
+                
+                if df.empty:
+                    continue
+                
+                indicators = calculate_technical_indicators(df)
+                
+                fig = make_subplots(
+                    rows=3, cols=1,
+                    shared_xaxes=True,
+                    vertical_spacing=0.05,
+                    row_heights=[0.5, 0.25, 0.25],
+                    subplot_titles=(f"{ATIVOS_AGRO[categoria][ticker]}", "MACD", "RSI")
+                )
+                
+                # Candlestick
+                fig.add_trace(go.Candlestick(
+                    x=df.index, open=df['Open'], high=df['High'],
+                    low=df['Low'], close=df['Close'], name="Preço"
+                ), row=1, col=1)
+                
+                if indicators:
+                    # SMAs
+                    fig.add_trace(go.Scatter(x=df.index, y=indicators['SMA_20'], 
+                                           name="SMA20", line=dict(color='orange', width=1)), row=1, col=1)
+                    fig.add_trace(go.Scatter(x=df.index, y=indicators['SMA_50'], 
+                                           name="SMA50", line=dict(color='blue', width=1)), row=1, col=1)
+                    
+                    # MACD
+                    fig.add_trace(go.Scatter(x=df.index, y=indicators['MACD'], 
+                                           name="MACD", line=dict(color='blue')), row=2, col=1)
+                    fig.add_trace(go.Scatter(x=df.index, y=indicators['MACD_signal'], 
+                                           name="Signal", line=dict(color='red')), row=2, col=1)
+                    
+                    # RSI
+                    fig.add_trace(go.Scatter(x=df.index, y=indicators['RSI'], 
+                                           name="RSI", line=dict(color='purple')), row=3, col=1)
+                    fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
+                    fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+                
+                fig.update_layout(height=800, showlegend=True, template="plotly_white")
+                st.plotly_chart(fig, use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Erro ao gerar gráfico: {e}")
     
     with tab3:
-        st.markdown("### 💾 Cache")
+        st.subheader("📉 Comparativo de Desempenho")
         
-        if cache_manager:
-            cache_info = cache_manager.get_cache_info()
+        fig = go.Figure()
+        for ticker in ativos:
+            try:
+                df = yf.Ticker(ticker).history(period=periodo)
+                if not df.empty:
+                    normalized = (df['Close'] / df['Close'].iloc[0]) * 100
+                    fig.add_trace(go.Scatter(
+                        x=df.index, y=normalized,
+                        mode='lines', name=ATIVOS_AGRO[categoria][ticker]
+                    ))
+            except:
+                pass
+        
+        fig.update_layout(
+            title="Desempenho Relativo (Base 100)",
+            yaxis_title="Índice", height=600,
+            template="plotly_white", hovermode='x unified'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with tab4:
+        st.subheader("📋 Tabela Resumo")
+        
+        dados = []
+        for ticker in ativos:
+            try:
+                brapi = get_brapi_quote(ticker)
+                df = yf.Ticker(ticker).history(period=periodo)
+                
+                if brapi:
+                    price = brapi.get('regularMarketPrice', 0)
+                    change = brapi.get('regularMarketChangePercent', 0)
+                elif not df.empty:
+                    price = df['Close'].iloc[-1]
+                    change = ((price - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
+                else:
+                    continue
+                
+                indicators = calculate_technical_indicators(df)
+                score, classification = calculate_score(df, indicators) if indicators else (50, "NEUTRO")
+                
+                dados.append({
+                    "Ativo": ATIVOS_AGRO[categoria][ticker],
+                    "Código": ticker.replace('.SA', ''),
+                    "Preço (R$)": f"{price:.2f}",
+                    "Var (%)": f"{change:+.2f}",
+                    "Score": score,
+                    "Recomendação": classification
+                })
+            except:
+                pass
+        
+        if dados:
+            df_resumo = pd.DataFrame(dados)
+            st.dataframe(df_resumo, use_container_width=True, hide_index=True)
             
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("📦 Itens", cache_info['total_items'])
-            
-            with col2:
-                st.metric("💾 Tamanho", f"{cache_info['total_size_mb']:.2f} MB")
-            
-            with col3:
-                last_update = cache_manager.get_last_update()
-                if last_update:
-                    st.metric("🕐 Última Atualização", last_update.strftime('%H:%M:%S'))
-            
-            st.markdown("---")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("🗑️ Limpar Expirado", use_container_width=True):
-                    removed = cache_manager.clear_expired()
-                    st.success(f"✅ {removed} itens removidos")
-            
-            with col2:
-                if st.button("🗑️ Limpar Tudo", use_container_width=True):
-                    cache_manager.clear_all_cache()
-                    st.success("✅ Cache limpo!")
+            csv = df_resumo.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "📥 Download CSV",
+                csv,
+                f"agro_tracker_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                "text/csv"
+            )
 
-# FOOTER
+else:
+    st.warning("⚠️ Selecione ativos na barra lateral")
+
+# Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #7f8c8d; padding: 20px;'>
-    <p>🌾 <strong>Agro Monitor Pro v2.0</strong></p>
-    <p>Desenvolvido com 💚 para o Agronegócio Brasileiro</p>
-    <p style='font-size: 12px;'>
-        ⚠️ Ferramenta de análise. Não constitui recomendação de investimento.
-    </p>
+<div style='text-align: center; color: #666;'>
+    <p><strong>🌾 Agro Tracker Pro</strong> | Desenvolvido com Brapi, Yahoo Finance, NewsAPI e Finnhub</p>
+    <p>⚠️ <em>Sistema educacional. Não constitui recomendação de investimento.</em></p>
 </div>
 """, unsafe_allow_html=True)
+
+if auto_refresh:
+    time.sleep(60)
+    st.rerun()
