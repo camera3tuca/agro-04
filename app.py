@@ -8,95 +8,65 @@ import time
 BRAPI_TOKEN = "iExnKM1xcbQcYL3cNPhPQ3"
 NEWS_API_KEY = "ec7100fa90ef4e3f9a69a914050dd736"
 
-st.set_page_config(page_title="🌾 Agro Tracker Pro", page_icon="🌾", layout="wide")
+st.set_page_config(page_title="Agro Tracker Pro", page_icon="🌾", layout="wide")
 
-# CSS
-css = """
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 * {font-family: 'Inter', sans-serif;}
-.main {background: linear-gradient(180deg, #f0f8f0 0%, #ffffff 100%);}
-h1 {
-    background: linear-gradient(135deg, #1b5e20 0%, #4caf50 50%, #81c784 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 3rem !important;
-    font-weight: 900 !important;
-    text-align: center;
-}
-.subtitle {text-align: center; color: #424242; font-size: 1.2rem; margin: 10px 0 30px 0;}
-.success-box {
-    background: linear-gradient(135deg, #00c853 0%, #69f0ae 100%);
-    color: white; padding: 25px; border-radius: 16px; text-align: center;
-    font-size: 1.8rem; font-weight: 800; margin: 25px 0;
-    box-shadow: 0 8px 30px rgba(0,200,83,0.4);
-}
-.stat-card {
-    background: white; padding: 30px; border-radius: 20px;
-    box-shadow: 0 6px 25px rgba(0,0,0,0.1); margin: 10px;
-    transition: all 0.3s; border-top: 4px solid var(--color);
-}
-.stat-card:hover {transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.15);}
+.main {background: linear-gradient(180deg, #f0f8f0, #ffffff);}
+h1 {background: linear-gradient(135deg, #1b5e20, #4caf50, #81c784);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    font-size: 3rem !important; font-weight: 900 !important; text-align: center;}
+.subtitle {text-align: center; color: #424242; font-size: 1.2rem; margin-bottom: 30px;}
+.success {background: linear-gradient(135deg, #00c853, #69f0ae); color: white;
+          padding: 25px; border-radius: 16px; text-align: center; font-size: 1.8rem;
+          font-weight: 800; margin: 25px 0; box-shadow: 0 8px 30px rgba(0,200,83,0.4);}
+.stat {background: white; padding: 30px; border-radius: 20px;
+       box-shadow: 0 6px 25px rgba(0,0,0,0.1); margin: 10px; transition: all 0.3s;}
+.stat:hover {transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.15);}
 .stat-icon {font-size: 3rem; display: block; margin-bottom: 10px;}
 .stat-label {font-size: 0.9rem; color: #757575; font-weight: 700; text-transform: uppercase;}
-.stat-value {font-size: 3.5rem; font-weight: 900; color: var(--color);}
-.cat-header {
-    background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
-    color: white; padding: 22px 30px; border-radius: 16px;
-    font-size: 1.6rem; font-weight: 800; margin: 30px 0 20px 0;
-    box-shadow: 0 6px 20px rgba(21,101,192,0.35);
-}
-.asset-card {
-    background: white; padding: 28px; border-radius: 18px;
-    border-left: 8px solid var(--color); margin: 15px 0;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: all 0.3s;
-}
-.asset-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
-}
-.asset-name {font-size: 1.4rem; font-weight: 800; color: #212121; margin-bottom: 8px;}
-.asset-ticker {
-    font-size: 0.95rem; color: #616161; font-weight: 700;
-    background: #f5f5f5; padding: 6px 14px; border-radius: 10px;
-    display: inline-block; margin-bottom: 15px;
-}
-.price-big {font-size: 2.3rem; font-weight: 900; color: #1a237e;}
-.price-change {padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; margin-left: 10px;}
-.price-up {background: #c8e6c9; color: #1b5e20;}
-.price-down {background: #ffcdd2; color: #b71c1c;}
-.score-badge {
-    padding: 14px 28px; border-radius: 30px; font-weight: 800;
-    font-size: 1.2rem; display: inline-block; margin: 12px 0;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-}
-.score-buy-strong {background: linear-gradient(135deg, #00c853 0%, #69f0ae 100%); color: white;}
-.score-buy {background: linear-gradient(135deg, #76ff03 0%, #b2ff59 100%); color: #1b5e20;}
-.score-neutral {background: linear-gradient(135deg, #ffd54f 0%, #fff176 100%); color: #f57c00;}
-.score-sell {background: linear-gradient(135deg, #ff5252 0%, #ff8a80 100%); color: white;}
-.news-card {
-    background: white; padding: 22px; border-radius: 14px;
-    border-left: 5px solid #1976d2; margin: 14px 0;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08); transition: all 0.3s;
-}
-.news-card:hover {box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateX(8px);}
+.stat-value {font-size: 3.5rem; font-weight: 900;}
+.cat {background: linear-gradient(135deg, #1565c0, #42a5f5); color: white;
+     padding: 22px 30px; border-radius: 16px; font-size: 1.6rem; font-weight: 800;
+     margin: 30px 0 20px 0; box-shadow: 0 6px 20px rgba(21,101,192,0.35);}
+.card {background: white; padding: 28px; border-radius: 18px; margin: 15px 0;
+       box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: all 0.3s;}
+.card:hover {transform: translateY(-8px) scale(1.02); box-shadow: 0 12px 35px rgba(0,0,0,0.15);}
+.name {font-size: 1.4rem; font-weight: 800; color: #212121; margin-bottom: 8px;}
+.ticker {font-size: 0.95rem; color: #616161; font-weight: 700; background: #f5f5f5;
+         padding: 6px 14px; border-radius: 10px; display: inline-block; margin-bottom: 15px;}
+.price {font-size: 2.3rem; font-weight: 900; color: #1a237e;}
+.change {padding: 10px 18px; border-radius: 12px; font-weight: 800;
+         font-size: 1.1rem; margin-left: 10px;}
+.up {background: #c8e6c9; color: #1b5e20;}
+.down {background: #ffcdd2; color: #b71c1c;}
+.badge {padding: 14px 28px; border-radius: 30px; font-weight: 800; font-size: 1.2rem;
+        display: inline-block; margin: 12px 0; box-shadow: 0 6px 20px rgba(0,0,0,0.25);}
+.buy-strong {background: linear-gradient(135deg, #00c853, #69f0ae); color: white;}
+.buy {background: linear-gradient(135deg, #76ff03, #b2ff59); color: #1b5e20;}
+.neutral {background: linear-gradient(135deg, #ffd54f, #fff176); color: #f57c00;}
+.sell {background: linear-gradient(135deg, #ff5252, #ff8a80); color: white;}
+.news {background: white; padding: 22px; border-radius: 14px; border-left: 5px solid #1976d2;
+       margin: 14px 0; box-shadow: 0 3px 12px rgba(0,0,0,0.08); transition: all 0.3s;}
+.news:hover {box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateX(8px);}
 </style>
-"""
-st.markdown(css, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 ATIVOS = {
-    "💼 Ações Brasileiras": {
+    "Ações BR": {
         'BEEF3': 'Minerva', 'MRFG3': 'Marfrig', 'JBSS3': 'JBS', 'BRFS3': 'BRF',
         'ABEV3': 'Ambev', 'MDIA3': 'M. Dias Branco', 'SMTO3': 'São Martinho',
         'SOJA3': 'Boa Safra', 'RAIZ4': 'Raízen', 'CSAN3': 'Cosan', 'SUZB3': 'Suzano',
         'KLBN11': 'Klabin', 'SLCE3': 'SLC Agrícola', 'AGRO3': 'BrasilAgro',
         'CAML3': 'Camil', 'TTEN3': 'Três Tentos', 'JALL3': 'Jalles Machado', 'KEPL3': 'Kepler Weber'
     },
-    "🌎 BDRs": {
+    "BDRs": {
         'A1DM34': 'Archer Daniels', 'B1UN34': 'Bunge', 'D1EE34': 'Deere', 'A1GC34': 'AGCO',
         'M1OS34': 'Mosaic', 'N1TR34': 'Nutrien', 'C1TV34': 'Corteva'
     },
-    "🏦 FIAGROs": {
+    "FIAGROs": {
         'AGRX11': 'Exes Araguaia', 'BBGO11': 'BB Crédito', 'FARM11': 'Santa Fé',
         'GCRA11': 'Galápagos', 'KNCA11': 'Kinea', 'RURA11': 'Itaú Asset',
         'SNAG11': 'Suno Agro', 'XPCA11': 'XP Crédito'
@@ -104,7 +74,7 @@ ATIVOS = {
 }
 
 def get_brapi(ticker):
-    for attempt in range(3):
+    for i in range(3):
         try:
             url = f"https://brapi.dev/api/quote/{ticker}?range=3mo&interval=1d&token={BRAPI_TOKEN}"
             r = requests.get(url, timeout=10)
@@ -112,9 +82,9 @@ def get_brapi(ticker):
                 d = r.json()
                 if 'results' in d and d['results']:
                     return d['results'][0]
-            time.sleep(0.5 * attempt)
+            time.sleep(0.5 * i)
         except:
-            time.sleep(0.5 * attempt)
+            time.sleep(0.5 * i)
     return None
 
 def get_news():
@@ -129,7 +99,7 @@ def get_news():
 
 def calc_score(data):
     if not data:
-        return 50, "⚪ NEUTRO"
+        return 50, "NEUTRO"
     
     score = 50
     price = data.get('regularMarketPrice', 0)
@@ -174,25 +144,25 @@ def calc_score(data):
     score = max(0, min(100, score))
     
     if score >= 75:
-        return score, "🟢 COMPRA FORTE"
+        return score, "COMPRA FORTE"
     elif score >= 60:
-        return score, "🟢 COMPRA"
+        return score, "COMPRA"
     elif score >= 45:
-        return score, "⚪ NEUTRO"
+        return score, "NEUTRO"
     else:
-        return score, "🔴 VENDA"
+        return score, "VENDA"
 
 st.markdown("<h1>🌾 Agro Tracker Pro</h1>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Sistema Inteligente de Análise • Dados em Tempo Real</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Sistema Inteligente de Análise de Investimentos</div>", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.markdown("### ⚙️ Configurações")
-    auto = st.checkbox("🔄 Auto-refresh (60s)", False)
-    graphs = st.checkbox("📈 Gráficos", True)
+    st.markdown("### Configurações")
+    auto = st.checkbox("Auto-refresh (60s)", False)
+    graphs = st.checkbox("Gráficos", True)
     st.markdown("---")
     st.caption(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
     st.info("📡 Brapi + NewsAPI")
-    st.markdown("**💡 Scores:**")
+    st.markdown("**Scores:**")
     st.markdown("🟢 75-100: Compra Forte")
     st.markdown("🟢 60-74: Compra")
     st.markdown("⚪ 45-59: Neutro")
@@ -200,21 +170,12 @@ with st.sidebar:
 
 with st.expander("📰 Notícias", expanded=False):
     news = get_news()
-    if news:
-        for a in news:
-            titulo = a.get('title', 'Sem título')
-            data = a.get('publishedAt', '')[:10]
-            fonte = a.get('source', {}).get('name', 'Fonte')
-            url = a.get('url', '#')
-            
-            html = f"""
-            <div class='news-card'>
-                <strong>{titulo}</strong><br>
-                <small>📅 {data} | {fonte}</small><br>
-                <a href='{url}' target='_blank'>Ler →</a>
-            </div>
-            """
-            st.markdown(html, unsafe_allow_html=True)
+    for a in news:
+        t = a.get('title', 'Sem título')
+        d = a.get('publishedAt', '')[:10]
+        s = a.get('source', {}).get('name', 'Fonte')
+        u = a.get('url', '#')
+        st.markdown(f"<div class='news'><strong>{t}</strong><br><small>📅 {d} | {s}</small><br><a href='{u}' target='_blank'>Ler →</a></div>", unsafe_allow_html=True)
 
 results = []
 prog = st.progress(0)
@@ -253,7 +214,7 @@ status.empty()
 results.sort(key=lambda x: x['Score'], reverse=True)
 
 if results:
-    st.markdown(f"<div class='success-box'>✅ {len(results)} ATIVOS ANALISADOS!</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='success'>✅ {len(results)} ATIVOS ANALISADOS!</div>", unsafe_allow_html=True)
     
     scores = [r['Score'] for r in results]
     compras = len([r for r in results if r['Score'] >= 60])
@@ -263,44 +224,16 @@ if results:
     c1, c2, c3, c4 = st.columns(4)
     
     with c1:
-        html = f"""
-        <div class='stat-card' style='--color:#1976d2;'>
-            <span class='stat-icon'>📊</span>
-            <div class='stat-label'>Score Médio</div>
-            <div class='stat-value' style='color:#1976d2;'>{sum(scores)/len(scores):.0f}</div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(f"<div class='stat'><span class='stat-icon'>📊</span><div class='stat-label'>Score Médio</div><div class='stat-value' style='color:#1976d2;'>{sum(scores)/len(scores):.0f}</div></div>", unsafe_allow_html=True)
     
     with c2:
-        html = f"""
-        <div class='stat-card' style='--color:#00c853;'>
-            <span class='stat-icon'>🟢</span>
-            <div class='stat-label'>Compras</div>
-            <div class='stat-value' style='color:#00c853;'>{compras}</div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(f"<div class='stat'><span class='stat-icon'>🟢</span><div class='stat-label'>Compras</div><div class='stat-value' style='color:#00c853;'>{compras}</div></div>", unsafe_allow_html=True)
     
     with c3:
-        html = f"""
-        <div class='stat-card' style='--color:#fbc02d;'>
-            <span class='stat-icon'>⚪</span>
-            <div class='stat-label'>Neutros</div>
-            <div class='stat-value' style='color:#fbc02d;'>{neutros}</div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(f"<div class='stat'><span class='stat-icon'>⚪</span><div class='stat-label'>Neutros</div><div class='stat-value' style='color:#fbc02d;'>{neutros}</div></div>", unsafe_allow_html=True)
     
     with c4:
-        html = f"""
-        <div class='stat-card' style='--color:#d32f2f;'>
-            <span class='stat-icon'>🔴</span>
-            <div class='stat-label'>Vendas</div>
-            <div class='stat-value' style='color:#d32f2f;'>{vendas}</div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(f"<div class='stat'><span class='stat-icon'>🔴</span><div class='stat-label'>Vendas</div><div class='stat-value' style='color:#d32f2f;'>{vendas}</div></div>", unsafe_allow_html=True)
     
     for cat in ATIVOS.keys():
         cat_data = [r for r in results if r['Cat'] == cat]
@@ -308,7 +241,7 @@ if results:
         if not cat_data:
             continue
         
-        st.markdown(f"<div class='cat-header'>{cat} • {len(cat_data)} ativos</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='cat'>💼 {cat} • {len(cat_data)} ativos</div>", unsafe_allow_html=True)
         
         cols = st.columns(3)
         
@@ -316,32 +249,20 @@ if results:
             with cols[idx % 3]:
                 if r['Score'] >= 75:
                     color = "#00c853"
-                    badge = "score-buy-strong"
+                    badge = "buy-strong"
                 elif r['Score'] >= 60:
                     color = "#76ff03"
-                    badge = "score-buy"
+                    badge = "buy"
                 elif r['Score'] >= 45:
                     color = "#ffd54f"
-                    badge = "score-neutral"
+                    badge = "neutral"
                 else:
                     color = "#ff5252"
-                    badge = "score-sell"
+                    badge = "sell"
                 
-                change_class = "price-up" if r['Var'] >= 0 else "price-down"
+                ch_class = "up" if r['Var'] >= 0 else "down"
                 
-                html = f"""
-                <div class='asset-card' style='--color: {color};'>
-                    <div class='asset-name'>{r['Nome']}</div>
-                    <div class='asset-ticker'>{r['Ticker']}</div>
-                    <div>
-                        <span class='price-big'>R$ {r['Preço']:.2f}</span>
-                        <span class='price-change {change_class}'>{r['Var']:+.2f}%</span>
-                    </div>
-                    <div class='score-badge {badge}'>Score: {r['Score']:.0f}/100</div>
-                    <div style='margin-top:10px; font-weight:700; font-size:1.1rem;'>{r['Class']}</div>
-                </div>
-                """
-                st.markdown(html, unsafe_allow_html=True)
+                st.markdown(f"<div class='card' style='border-left:8px solid {color};'><div class='name'>{r['Nome']}</div><div class='ticker'>{r['Ticker']}</div><div><span class='price'>R$ {r['Preço']:.2f}</span><span class='change {ch_class}'>{r['Var']:+.2f}%</span></div><div class='badge {badge}'>Score: {r['Score']:.0f}/100</div><div style='margin-top:10px; font-weight:700; font-size:1.1rem;'>🟢 {r['Class']}</div></div>", unsafe_allow_html=True)
                 
                 if graphs:
                     with st.expander("📈 Gráfico"):
@@ -350,57 +271,28 @@ if results:
                             df = pd.DataFrame(hist)
                             
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(
-                                x=list(range(len(df))),
-                                y=df['close'],
-                                fill='tozeroy',
-                                line=dict(color=color, width=3)
-                            ))
-                            
-                            fig.update_layout(
-                                height=200,
-                                margin=dict(l=0, r=0, t=0, b=0),
-                                showlegend=False,
-                                xaxis_visible=False,
-                                yaxis_visible=False
-                            )
+                            fig.add_trace(go.Scatter(x=list(range(len(df))), y=df['close'], fill='tozeroy', line=dict(color=color, width=3)))
+                            fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), showlegend=False, xaxis_visible=False, yaxis_visible=False)
                             
                             st.plotly_chart(fig, use_container_width=True)
     
     st.markdown("### 📋 Tabela Completa")
     
     df = pd.DataFrame([{
-        'Cat': r['Cat'],
-        'Nome': r['Nome'],
-        'Ticker': r['Ticker'],
-        'Preço': f"R$ {r['Preço']:.2f}",
-        'Var': f"{r['Var']:+.2f}%",
-        'Score': f"{r['Score']:.0f}/100",
-        'Recomendação': r['Class']
+        'Cat': r['Cat'], 'Nome': r['Nome'], 'Ticker': r['Ticker'],
+        'Preço': f"R$ {r['Preço']:.2f}", 'Var': f"{r['Var']:+.2f}%",
+        'Score': f"{r['Score']:.0f}/100", 'Rec': r['Class']
     } for r in results])
     
     st.dataframe(df, use_container_width=True, hide_index=True, height=600)
     
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        "📥 Download CSV",
-        csv,
-        f"agro_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-        "text/csv",
-        use_container_width=True
-    )
+    st.download_button("📥 Download CSV", csv, f"agro_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", "text/csv", use_container_width=True)
 else:
     st.error("❌ Nenhum ativo processado")
 
 st.markdown("---")
-html_footer = """
-<div style='text-align:center; padding:30px; color:#616161;'>
-    <p style='font-size:1.3rem; font-weight:700;'>🌾 Agro Tracker Pro</p>
-    <p>Brapi + NewsAPI • Dados em tempo real</p>
-    <p style='font-size:0.9rem; color:#9e9e9e;'>⚠️ Sistema educacional</p>
-</div>
-"""
-st.markdown(html_footer, unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; padding:30px; color:#616161;'><p style='font-size:1.3rem; font-weight:700;'>🌾 Agro Tracker Pro</p><p>Brapi + NewsAPI</p><p style='font-size:0.9rem; color:#9e9e9e;'>⚠️ Sistema educacional</p></div>", unsafe_allow_html=True)
 
 if auto:
     time.sleep(60)
